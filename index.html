@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Fermata">
+<meta name="theme-color" content="#F2EDE3">
+<title>Fermata</title>
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' fill='%23F2EDE3'/%3E%3Ctext x='90' y='128' font-size='110' text-anchor='middle' fill='%231C1A17' font-family='Georgia,serif'%3E%F0%9D%84%90%3C/text%3E%3C/svg%3E">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Spectral:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap');
+  :root{
+    --paper:#F2EDE3; --card:#FBF8F1; --ink:#1C1A17; --mute:#6B6F76; --faint:#9AA0A6;
+    --strings:#3D4F6B; --brass:#B5853A; --percussion:#9C4A3C; --woodwinds:#5A6E4A;
+    --strings-wash:#E7E9EF; --brass-wash:#F1E8D6; --percussion-wash:#F1E0DB; --woodwinds-wash:#E3E8DC;
+    --serif:'Spectral','Iowan Old Style',Palatino,Georgia,serif;
+    --sans:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+    --tabbar: 74px;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;background:var(--paper);color:var(--ink);font-family:var(--sans);
+    overscroll-behavior-y:contain;-webkit-font-smoothing:antialiased;}
+  body{padding-bottom:calc(var(--tabbar) + env(safe-area-inset-bottom));}
+  button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit;}
+  input,textarea,select{font-family:inherit;}
+  button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--percussion);outline-offset:2px;}
+  .wrap{max-width:560px;margin:0 auto;padding:0 16px;}
+
+  /* header */
+  header{padding:calc(env(safe-area-inset-top) + 16px) 16px 12px;max-width:560px;margin:0 auto;}
+  .eyebrow{font:600 11px var(--sans);letter-spacing:.22em;text-transform:uppercase;color:var(--percussion);}
+  .fermataMark{font-family:var(--serif);}
+  .dateline{font:400 13px var(--sans);color:var(--mute);margin-top:3px;}
+  .staff{display:flex;flex-direction:column;gap:3px;margin:9px 0 0;max-width:150px;}
+  .staff span{display:block;height:1px;background:rgba(28,26,23,.2);}
+
+  /* screen sections */
+  .screen{display:none;animation:fade .18s ease;}
+  .screen.active{display:block;}
+  @keyframes fade{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:none;}}
+  h2.title{font:600 15px var(--sans);letter-spacing:.04em;text-transform:uppercase;color:var(--mute);margin:22px 0 12px;}
+
+  /* CAPTURE */
+  .capInput{width:100%;font:400 18px var(--sans);padding:16px;border-radius:14px;border:1px solid rgba(28,26,23,.16);
+    background:#fff;color:var(--ink);outline:none;resize:none;line-height:1.4;min-height:84px;}
+  .capInput::placeholder{color:var(--faint);}
+  .padLabel{font:600 12px var(--sans);letter-spacing:.1em;text-transform:uppercase;color:var(--mute);margin:18px 0 10px;}
+  .pads{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .pad{padding:18px 14px;border-radius:14px;text-align:left;border:2px solid transparent;transition:transform .08s;}
+  .pad:active{transform:scale(.97);}
+  .pad .pname{font:600 17px var(--serif);}
+  .pad .phas{font:400 11.5px var(--sans);opacity:.7;margin-top:3px;line-height:1.3;}
+  .pad.sel{border-color:var(--ink);}
+  .instPick{margin-top:14px;}
+  .instPick select{width:100%;font:400 15px var(--sans);padding:13px;border-radius:12px;
+    border:1px solid rgba(28,26,23,.18);background:#fff;color:var(--ink);}
+  .capBtn{width:100%;margin-top:14px;padding:16px;border-radius:14px;background:var(--ink);color:var(--paper);
+    font:600 16px var(--sans);}
+  .capBtn:disabled{opacity:.4;}
+  .capHint{font:400 12.5px var(--sans);color:var(--mute);text-align:center;margin-top:12px;line-height:1.5;}
+
+  /* open todos under capture */
+  .todo{display:flex;align-items:flex-start;gap:11px;padding:13px 14px;background:var(--card);
+    border:1px solid rgba(28,26,23,.08);border-radius:12px;margin-bottom:8px;}
+  .todo .chk{font-size:19px;line-height:1;color:var(--woodwinds);flex-shrink:0;padding-top:1px;width:22px;}
+  .todo .ttext{font:400 15px var(--sans);flex:1;line-height:1.4;}
+  .todo.done .ttext{text-decoration:line-through;opacity:.45;}
+  .todo .tag{font:600 10.5px var(--sans);padding:3px 8px;border-radius:999px;white-space:nowrap;flex-shrink:0;}
+  .todo .del{color:var(--faint);font-size:22px;line-height:1;padding:0 2px;flex-shrink:0;}
+
+  /* PODIUM */
+  .nowCard{background:var(--card);border:1px solid rgba(28,26,23,.12);border-radius:16px;padding:18px;margin-bottom:14px;}
+  .fermataBanner{display:flex;gap:12px;align-items:center;background:var(--woodwinds-wash);
+    border:1px solid rgba(90,110,74,.3);border-radius:12px;padding:14px;margin-bottom:14px;}
+  .fermataBanner .mk{font:400 30px var(--serif);color:var(--woodwinds);line-height:1;}
+  .fermataBanner .tx{font:500 14px var(--sans);color:#41502F;line-height:1.4;}
+  .leadItem{display:flex;gap:11px;align-items:flex-start;margin-bottom:14px;}
+  .leadItem:last-child{margin-bottom:0;}
+  .pip{width:10px;height:10px;border-radius:50%;margin-top:6px;flex-shrink:0;}
+  .leadTitle{font:600 18px var(--serif);line-height:1.2;}
+  .leadNote{font:400 13px var(--sans);color:var(--mute);margin-top:3px;line-height:1.45;}
+  .cue{display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid rgba(28,26,23,.07);}
+  .cue:last-child{border-bottom:none;}
+  .cueTitle{font:500 15px var(--sans);flex:1;}
+  .cueWhen{font:500 13px var(--sans);color:var(--mute);}
+  .cueWhen.urgent{color:var(--percussion);font-weight:700;}
+  .floatLine{font:400 13px var(--sans);color:var(--mute);line-height:1.55;padding:14px;background:var(--card);
+    border-radius:12px;border:1px solid rgba(28,26,23,.08);}
+  .chain{font:400 13.5px var(--sans);display:flex;flex-wrap:wrap;align-items:center;gap:6px;
+    padding:11px 0;border-bottom:1px solid rgba(28,26,23,.07);line-height:1.5;}
+  .chain:last-child{border-bottom:none;}
+  .chain b{font-weight:600;}
+  .chain .ar{color:var(--brass);font-weight:700;}
+  .chain .cd{font:600 11px var(--sans);color:var(--percussion);background:var(--percussion-wash);padding:1px 7px;border-radius:5px;}
+
+  /* SCORE */
+  .secBlock{margin-bottom:24px;}
+  .secHead{display:flex;align-items:baseline;gap:9px;margin-bottom:11px;padding-left:2px;border-left:3px solid;padding-left:12px;}
+  .secName{font:600 21px var(--serif);}
+  .secRole{font:400 12px var(--sans);color:var(--mute);}
+  .iCard{border-radius:13px;padding:14px;margin-bottom:9px;}
+  .iTop{display:flex;justify-content:space-between;align-items:baseline;gap:10px;}
+  .iTitle{font:600 16px var(--serif);}
+  .dyn{font:italic 600 12px var(--serif);color:var(--percussion);margin-left:7px;}
+  .iDate{font:600 11px var(--sans);color:var(--percussion);white-space:nowrap;}
+  .iAim{font:400 13px var(--sans);color:#3A3D42;margin-top:5px;line-height:1.45;}
+  .iNote{font:italic 400 12.5px var(--sans);color:var(--mute);margin-top:5px;line-height:1.45;}
+  .statusRow{display:flex;gap:6px;flex-wrap:wrap;margin-top:11px;}
+  .sBtn{display:inline-flex;align-items:center;gap:5px;font:500 12px var(--sans);padding:7px 11px;
+    border-radius:999px;border:1px solid rgba(28,26,23,.18);background:rgba(255,255,255,.55);}
+  .sBtn.on{background:var(--ink);color:var(--paper);border-color:var(--ink);}
+  .sDot{width:7px;height:7px;border-radius:50%;}
+  .iTodos{margin-top:10px;}
+  .iTodo{display:flex;align-items:center;gap:9px;margin-top:7px;}
+  .iTodo .chk{font-size:17px;color:var(--woodwinds);width:20px;flex-shrink:0;}
+  .iTodo .tt{font:400 13.5px var(--sans);flex:1;}
+  .iTodo.done .tt{text-decoration:line-through;opacity:.45;}
+  .livesRow{display:flex;align-items:center;gap:8px;margin-top:11px;}
+  .livesRow .lab{font:600 9.5px var(--sans);letter-spacing:.1em;text-transform:uppercase;color:var(--faint);}
+  .livesRow input{flex:1;font:400 12.5px var(--sans);padding:7px 9px;border-radius:8px;
+    border:1px solid rgba(28,26,23,.16);background:rgba(255,255,255,.6);color:var(--ink);outline:none;}
+  .livesRow a{font:600 12px var(--sans);color:var(--strings);text-decoration:none;white-space:nowrap;}
+  .filterRow{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:18px;}
+  .fChip{font:500 12px var(--sans);padding:7px 13px;border-radius:999px;border:1px solid rgba(28,26,23,.2);}
+  .fChip.on{background:var(--ink);color:var(--paper);border-color:var(--ink);}
+
+  /* LOG */
+  .logCard{background:var(--card);border:1px solid rgba(28,26,23,.12);border-radius:16px;padding:18px;margin-bottom:14px;}
+  .logDate{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+  .logDate input{font:400 15px var(--sans);padding:10px 12px;border-radius:10px;border:1px solid rgba(28,26,23,.18);background:#fff;color:var(--ink);}
+  .stepRow{display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid rgba(28,26,23,.08);}
+  .stepRow:last-child{border-bottom:none;}
+  .stepLabelWrap{display:flex;flex-direction:column;}
+  .stepLabel{font:600 16px var(--serif);}
+  .stepHas{font:400 11px var(--sans);color:var(--faint);margin-top:1px;}
+  .stepper{display:flex;align-items:center;gap:6px;}
+  .stepBtn{width:42px;height:42px;border-radius:12px;border:1px solid rgba(28,26,23,.2);background:#fff;
+    font:600 22px var(--sans);display:flex;align-items:center;justify-content:center;line-height:1;}
+  .stepBtn:active{background:var(--paper);}
+  .stepVal{font:600 19px var(--serif);min-width:46px;text-align:center;}
+  .stepVal.zero{color:var(--faint);}
+  .dayTotal{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-top:16px;padding-top:16px;border-top:1px dashed rgba(28,26,23,.16);}
+  .dayTotalNum{font:600 26px var(--serif);}
+  .dayTotalOf{font:400 14px var(--sans);color:var(--faint);}
+  .upkeepChip{font:600 11px var(--sans);color:var(--brass);background:var(--brass-wash);padding:4px 10px;border-radius:999px;}
+  .dayHint{font:500 13px var(--sans);width:100%;line-height:1.4;}
+  .icarBox{background:var(--brass-wash);border:1px solid rgba(181,133,58,.4);border-radius:14px;padding:16px;margin-top:4px;}
+  .icarTop{display:flex;align-items:baseline;justify-content:space-between;}
+  .icarLabel{font:600 13px var(--sans);color:var(--brass);text-transform:uppercase;letter-spacing:.06em;}
+  .icarBig{font:600 28px var(--serif);color:var(--brass);}
+  .icarBig small{font:400 14px var(--sans);color:var(--faint);}
+  .icarTrack{height:9px;background:rgba(181,133,58,.18);border-radius:5px;overflow:hidden;margin:11px 0;}
+  .icarFill{height:100%;background:var(--brass);border-radius:5px;}
+  .icarHint{font:400 12px var(--sans);color:var(--mute);line-height:1.45;}
+  .saveBtn{width:100%;margin-top:14px;padding:16px;border-radius:14px;background:var(--ink);color:var(--paper);font:600 16px var(--sans);}
+  .pva{display:flex;align-items:center;gap:11px;margin-bottom:12px;}
+  .pvaName{display:flex;flex-direction:column;width:104px;flex-shrink:0;}
+  .pvaName .nm{font:600 14px var(--serif);}
+  .pvaName .hs{font:400 10px var(--sans);color:var(--faint);margin-top:1px;line-height:1.2;}
+  .pvaTrack{position:relative;flex:1;height:13px;background:rgba(28,26,23,.06);border-radius:7px;overflow:hidden;}
+  .pvaFill{position:absolute;left:0;top:0;height:100%;border-radius:7px;}
+  .pvaMark{position:absolute;top:-3px;width:2px;height:19px;background:var(--ink);}
+  .pvaNums{font:600 12px var(--sans);width:58px;text-align:right;color:#3A3D42;}
+  .smallNote{font:400 12px var(--sans);color:var(--mute);line-height:1.5;margin-top:12px;}
+
+  /* TAB BAR */
+  nav.tabs{position:fixed;bottom:0;left:0;right:0;background:rgba(242,237,227,.94);
+    backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-top:1px solid rgba(28,26,23,.1);
+    display:flex;padding-bottom:env(safe-area-inset-bottom);z-index:50;}
+  nav.tabs button{flex:1;padding:11px 4px;display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--faint);}
+  nav.tabs button.on{color:var(--ink);}
+  nav.tabs .ti{font-size:20px;line-height:1;}
+  nav.tabs .tl{font:600 10px var(--sans);letter-spacing:.03em;}
+  nav.tabs .badge{position:absolute;transform:translate(14px,-4px);background:var(--percussion);color:#fff;
+    font:700 9px var(--sans);min-width:15px;height:15px;border-radius:8px;display:flex;align-items:center;justify-content:center;padding:0 3px;}
+
+  .empty{font:400 14px var(--sans);color:var(--faint);text-align:center;padding:30px 16px;line-height:1.5;}
+</style>
+</head>
+<body>
+<header>
+  <div class="eyebrow"><span class="fermataMark">𝄐</span>&nbsp; Fermata</div>
+  <div class="staff" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span></div>
+  <div class="dateline" id="dateline"></div>
+</header>
+
+<main class="wrap">
+  <!-- CAPTURE -->
+  <section class="screen active" id="screen-capture">
+    <h2 class="title">Capture</h2>
+    <textarea class="capInput" id="capText" placeholder="Dump a task or thought before it's gone…" rows="3"></textarea>
+    <div class="padLabel">Which section?</div>
+    <div class="pads" id="capPads"></div>
+    <div class="instPick" id="capInstWrap" style="display:none;">
+      <select id="capInst"></select>
+    </div>
+    <button class="capBtn" id="capBtn" disabled>Add to list</button>
+    <div class="capHint">Pick a section, optionally an instrument. File now or sort later.</div>
+
+    <h2 class="title">Open to-dos</h2>
+    <div id="todoList"></div>
+  </section>
+
+  <!-- PODIUM -->
+  <section class="screen" id="screen-podium">
+    <div id="fermataSlot"></div>
+    <h2 class="title">Playing now</h2>
+    <div class="nowCard" id="leadCard"></div>
+    <h2 class="title">Cued to enter</h2>
+    <div class="nowCard" id="cueCard"></div>
+    <h2 class="title">The week</h2>
+    <div class="floatLine" id="floatLine"></div>
+    <h2 class="title">Critical paths</h2>
+    <div class="nowCard" id="chainCard"></div>
+  </section>
+
+  <!-- SCORE -->
+  <section class="screen" id="screen-score">
+    <h2 class="title">Full score</h2>
+    <div class="filterRow" id="filterRow"></div>
+    <div id="scoreList"></div>
+  </section>
+
+  <!-- LOG -->
+  <section class="screen" id="screen-log">
+    <h2 class="title">End-of-day log</h2>
+    <div class="logCard">
+      <div class="logDate">
+        <span style="font:600 12px var(--sans);color:var(--mute);">Date</span>
+        <input type="date" id="logDate">
+      </div>
+      <div id="stepRows"></div>
+      <div class="dayTotal" id="dayTotal"></div>
+      <button class="saveBtn" id="saveDayBtn">Save day</button>
+    </div>
+    <div class="icarBox">
+      <div class="icarTop">
+        <span class="icarLabel">ICAR · reporting clock</span>
+        <span class="icarBig" id="icarBig">0.0<small> / 6h</small></span>
+      </div>
+      <div class="icarTrack"><div class="icarFill" id="icarFill" style="width:0%"></div></div>
+      <div class="icarHint" id="icarHint"></div>
+    </div>
+    <h2 class="title">Planned vs. actual — this week</h2>
+    <div class="logCard" id="pvaCard"></div>
+  </section>
+</main>
+
+<nav class="tabs">
+  <button data-screen="capture" class="on"><span class="ti">＋</span><span class="tl">Capture</span></button>
+  <button data-screen="podium"><span class="ti">𝄢</span><span class="tl">Podium</span></button>
+  <button data-screen="score"><span class="ti">≣</span><span class="tl">Score</span></button>
+  <button data-screen="log"><span class="ti">⏱</span><span class="tl">Log</span></button>
+</nav>
+
+<script>
+const SECTIONS = {
+  strings:    {label:"Strings",    role:"Arcadia — the sustained core",     ink:"var(--strings)",    wash:"var(--strings-wash)",    budget:40,   has:"Arcadia (your job)"},
+  brass:      {label:"Brass",      role:"Side professional work",           ink:"var(--brass)",      wash:"var(--brass-wash)",      budget:15.5, has:"ex situ · SHERLOC · SCOBI · Abzu"},
+  percussion: {label:"Percussion", role:"Family — keeps the tempo",         ink:"var(--percussion)", wash:"var(--percussion-wash)", budget:31.5, has:"Family"},
+  woodwinds:  {label:"Woodwinds",  role:"Passion — the section that rests", ink:"var(--woodwinds)",  wash:"var(--woodwinds-wash)",  budget:0,    has:"Art · learning · travel"},
+};
+const SECTION_HEX = {strings:"#3D4F6B",brass:"#B5853A",percussion:"#9C4A3C",woodwinds:"#5A6E4A"};
+const STATUS = {
+  lead:{label:"Lead",mark:"ff",hint:"Fortissimo — playing now",dot:"#1C1A17"},
+  entering:{label:"Entering",mark:"cresc.",hint:"Crescendo — cued",dot:"#B5853A"},
+  planning:{label:"Planning",mark:"mp",hint:"Mezzo-piano — arranging",dot:"#3D4F6B"},
+  resting:{label:"Resting",mark:"tacet",hint:"Tacet — intentionally silent",dot:"#9AA0A6"},
+  standing:{label:"Standing",mark:"ostin.",hint:"Ostinato — recurring",dot:"#6B6F76"},
+};
+
+const SEED_ITEMS = [
+  {id:"s1",section:"strings",status:"lead",title:"Bottom-up protein Raman",aim:"Raman as a complementary chemical-state readout for protein ML.",note:"Lead voice. Protected: Wed + Fri.",deadline:"",livesIn:""},
+  {id:"s2",section:"strings",status:"entering",title:"raman-devil + spectral AI infra",aim:"Spectroscopy AI assistant; automated acquisition + interpretation.",note:"IP flag: publish architecture via ex situ/Carnegie.",deadline:"2026-06-24",livesIn:""},
+  {id:"s3",section:"strings",status:"planning",title:"Coherent Raman phenotyping",aim:"Yeast, algae. Multi-pub effort.",note:"Plan, don't do — sequence experiments + pubs.",deadline:"",livesIn:""},
+  {id:"s4",section:"strings",status:"resting",title:"Expand label-free phenotyping",aim:"SHG, TPEF, autofluorescence (white-light laser).",note:"Exploratory. Resting.",deadline:"",livesIn:""},
+  {id:"s5",section:"strings",status:"resting",title:"Address Raman limitations",aim:"New laser lines, optics, substrates, SERDS, time gating.",note:"Roadmap of future directions.",deadline:"",livesIn:""},
+  {id:"s6",section:"strings",status:"standing",title:"Manage Raman instruments",aim:"Training, updates, troubleshooting.",note:"Recurring load off the top.",deadline:"",livesIn:""},
+  {id:"s7",section:"strings",status:"standing",title:"General Arcadia scientist duties",aim:"Pub comments, interviews, preprints, reproducibility, 1:1 + 2 team meetings.",note:"Fixed weekly tax.",deadline:"",livesIn:""},
+  {id:"s8",section:"strings",status:"entering",title:"Dipeptide pub",aim:"Figures, outline/scope, pub-team meeting, draft to James.",note:"Active Arcadia paper.",deadline:"",livesIn:""},
+  {id:"s9",section:"strings",status:"entering",title:"Short new pub",aim:"Write the short new publication.",note:"Monday afternoon.",deadline:"2026-06-22",livesIn:""},
+  {id:"s10",section:"strings",status:"entering",title:"SciX registration + conference",aim:"Register for SciX; update CV with SciX.",note:"",deadline:"",livesIn:""},
+  {id:"s11",section:"strings",status:"lead",title:"Notion project organization",aim:"Finish organizing projects in Notion.",note:"Your Arcadia project home.",deadline:"",livesIn:""},
+
+  {id:"b1",section:"brass",status:"lead",title:"ICAR sample ontology",aim:"Nail the sample tagging/org ontology. Critical path.",note:"Feeds AGU abstract. Committed hours (0.15 FTE ~6/wk) — reporting consequences.",deadline:"",livesIn:""},
+  {id:"b2",section:"brass",status:"entering",title:"AGU abstract — sample ontology",aim:"Submit ontology as AGU abstract.",note:"Hard deadline. Depends on ontology.",deadline:"2026-08-05",livesIn:""},
+  {id:"b3",section:"brass",status:"lead",title:"ex situ financial / PMS setup",aim:"Call BofA Mon for paperwork → log into PMS, submit banking info → draw funds.",note:"Undrawn since Jan 5. Laptop purchase downstream.",deadline:"2026-06-22",livesIn:""},
+  {id:"b4",section:"brass",status:"entering",title:"ICAR logo + style guide",aim:"Design logo + style guide with teammate. Send Streamlit app code to Ife.",note:"Quick win + intern handoff.",deadline:"",livesIn:""},
+  {id:"b5",section:"brass",status:"standing",title:"ICAR data subgroup (co-run)",aim:"Weekly subgroup + ontology series.",note:"Standing.",deadline:"",livesIn:""},
+  {id:"b6",section:"brass",status:"standing",title:"Co-mentor 2 ICAR interns",aim:"Mentor 2 interns (one on tagging UX). Shared with SCOBI.",note:"Standing — but leverage.",deadline:"",livesIn:""},
+  {id:"b7",section:"brass",status:"planning",title:"ex situ as joint venture with H",aim:"Explore qualified joint venture with partner.",note:"Background, no clock.",deadline:"",livesIn:""},
+  {id:"b8",section:"brass",status:"entering",title:"SHERLOC meta-analysis paper",aim:"Meta-analysis of results to date. Download more datasets, update metadata.",note:"Waking from hibernation. With Kyle + Kevin.",deadline:"",livesIn:""},
+  {id:"b9",section:"brass",status:"entering",title:"SHERLOC colorization package",aim:"Update package, make presentation + Streamlit interface.",note:"Monday.",deadline:"2026-06-22",livesIn:""},
+  {id:"b10",section:"brass",status:"entering",title:"SHERLOC new paper proposal",aim:"Work on the outline for the new paper proposal.",note:"",deadline:"",livesIn:""},
+  {id:"b11",section:"brass",status:"resting",title:"SHERLOC cerium-in-sulfates paper",aim:"Cerium in sulfates from lab data.",note:"Resting/cancelled. Parked.",deadline:"",livesIn:""},
+  {id:"b12",section:"brass",status:"entering",title:"SHERLOC rover shift",aim:"Operational rover shift.",note:"July.",deadline:"2026-07-01",livesIn:""},
+  {id:"b13",section:"brass",status:"standing",title:"SHERLOC mission meetings",aim:"1-2 meetings weekly.",note:"Standing.",deadline:"",livesIn:""},
+  {id:"b14",section:"brass",status:"lead",title:"SCOBI ODR dataset release",aim:"Late-July release on ODR. Gated by Zenodo, processing review, Box QC.",note:"Anchor deadline. Sept pub downstream.",deadline:"2026-07-31",livesIn:""},
+  {id:"b15",section:"brass",status:"entering",title:"SCOBI: Zenodo cleanup",aim:"Clean Zenodo + audit current data.",note:"Gates ODR release.",deadline:"2026-07-31",livesIn:""},
+  {id:"b16",section:"brass",status:"entering",title:"SCOBI: processing review",aim:"Review reflectance + Raman data processing.",note:"Gates ODR release.",deadline:"2026-07-31",livesIn:""},
+  {id:"b17",section:"brass",status:"entering",title:"SCOBI: Box-folder QC",aim:"QC data in Box folder.",note:"Gates ODR release. DELEGATE to intern.",deadline:"2026-07-31",livesIn:""},
+  {id:"b18",section:"brass",status:"entering",title:"SCOBI AGU session (accepted)",aim:"Register for AGU; decide abstract (ICAR or SCOBI); advertise to PEN + others.",note:"Session proposal accepted.",deadline:"",livesIn:""},
+  {id:"b19",section:"brass",status:"resting",title:"SCOBI data publication",aim:"Draft your part of the data-focused pub.",note:"~Sept. Downstream of ODR release.",deadline:"2026-09-01",livesIn:""},
+  {id:"b20",section:"brass",status:"resting",title:"Abzu paper 1 — organics/life detection to date",aim:"Lead paper, Mars missions to date. Contact Mary Beth + Floyd for next writing round.",note:"Due next year. Team out of Ames.",deadline:"",livesIn:""},
+  {id:"b21",section:"brass",status:"resting",title:"Abzu paper 2 — future Mars life detection",aim:"Lead paper on future missions.",note:"Call Allie — DECLINE this one. Protecting capacity.",deadline:"",livesIn:""},
+  {id:"b22",section:"brass",status:"standing",title:"Networking + prof dev",aim:"Keep warm, stay visible. JGR peer review (someone else's). Update CV w/ SciX.",note:"Absorbs former job search. A rhythm, not a campaign.",deadline:"",livesIn:""},
+
+  {id:"p1",section:"percussion",status:"standing",title:"Locked family time",aim:"6-8am & 5-7:30pm daily. One weekend day work, the other entirely family. Wed flexible (WFH).",note:"Immovable. The silence the music is written around.",deadline:"",livesIn:""},
+
+  {id:"w1",section:"woodwinds",status:"resting",title:"Art / design projects",aim:"",note:"Hold ideas. No nudging.",deadline:"",livesIn:""},
+  {id:"w2",section:"woodwinds",status:"resting",title:"Learning",aim:"",note:"Hold ideas.",deadline:"",livesIn:""},
+  {id:"w3",section:"woodwinds",status:"resting",title:"Reconnecting with myself",aim:"",note:"Hold ideas.",deadline:"",livesIn:""},
+  {id:"w4",section:"woodwinds",status:"resting",title:"Travel",aim:"",note:"Hold ideas.",deadline:"",livesIn:""},
+];
+
+// preloaded to-dos from today's capture dump, filed to instruments
+const SEED_TODOS = [
+  {id:"t1",text:"Finish review for JGR paper (someone else's)",section:"brass",itemId:"b22",done:false},
+  {id:"t2",text:"Update colorization package + presentation + Streamlit interface",section:"brass",itemId:"b9",done:false},
+  {id:"t3",text:"Download more datasets + update metadata",section:"brass",itemId:"b8",done:false},
+  {id:"t4",text:"Outline for new paper proposal",section:"brass",itemId:"b10",done:false},
+  {id:"t5",text:"Logo + style guide design",section:"brass",itemId:"b4",done:false},
+  {id:"t6",text:"Send Streamlit app code to Ife",section:"brass",itemId:"b4",done:false},
+  {id:"t7",text:"Call Bank of America Mon for correct paperwork",section:"brass",itemId:"b3",done:false},
+  {id:"t8",text:"Log into PMS + submit banking info (after BofA call)",section:"brass",itemId:"b3",done:false},
+  {id:"t9",text:"Contact Mary Beth + Floyd for next writing round",section:"brass",itemId:"b20",done:false},
+  {id:"t10",text:"Call Allie — decline writing another paper",section:"brass",itemId:"b21",done:false},
+  {id:"t11",text:"Register for AGU + decide abstract (ICAR or SCOBI) + advertise to PEN",section:"brass",itemId:"b18",done:false},
+  {id:"t12",text:"Register for SciX",section:"strings",itemId:"s10",done:false},
+  {id:"t13",text:"Update CV with SciX",section:"brass",itemId:"b22",done:false},
+  {id:"t14",text:"Write short new pub (Mon afternoon)",section:"strings",itemId:"s9",done:false},
+  {id:"t15",text:"Respond to pub comments",section:"strings",itemId:"s7",done:false},
+  {id:"t16",text:"Finish draft of figures for dipeptide pub",section:"strings",itemId:"s8",done:false},
+  {id:"t17",text:"Set up meeting with pub team for dipeptide pub",section:"strings",itemId:"s8",done:false},
+  {id:"t18",text:"Update outline/scope doc + draft for dipeptide pub, send to James",section:"strings",itemId:"s8",done:false},
+  {id:"t19",text:"Finish project organization on Notion",section:"strings",itemId:"s11",done:false},
+];
+
+// ---------- state + persistence ----------
+const KEY="fermata:mobile:v1";
+let state={items:SEED_ITEMS,todos:SEED_TODOS,logs:[]};
+let capSection=null, capInst="";
+let scoreFilter="all";
+let logDraft={strings:0,brass:0,percussion:0,woodwinds:0,icar:0};
+let logDate=todayISO();
+
+function load(){
+  try{const raw=localStorage.getItem(KEY);if(raw){const d=JSON.parse(raw);
+    state.items=d.items||SEED_ITEMS;state.todos=d.todos||SEED_TODOS;state.logs=d.logs||[];}}catch(e){}
+}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(state));}catch(e){}}
+
+function todayISO(){return new Date().toISOString().slice(0,10);}
+function fmt(iso){if(!iso)return"";const d=new Date(iso+"T00:00:00");return d.toLocaleDateString("en-US",{month:"short",day:"numeric"});}
+function daysUntil(iso){if(!iso)return null;const a=new Date(todayISO()+"T00:00:00"),b=new Date(iso+"T00:00:00");return Math.round((b-a)/86400000);}
+function weekKey(iso){const d=new Date(iso+"T00:00:00");const day=(d.getDay()+6)%7;d.setDate(d.getDate()-day);return d.toISOString().slice(0,10);}
+
+// ---------- render: header ----------
+function renderHeader(){
+  const dow=new Date().getDay();
+  document.getElementById("dateline").textContent=
+    new Date().toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"})+(dow===3?" · WFH":"");
+}
+
+// ---------- render: capture ----------
+function renderCapture(){
+  const pads=document.getElementById("capPads");
+  pads.innerHTML="";
+  Object.entries(SECTIONS).forEach(([k,s])=>{
+    const b=document.createElement("button");
+    b.className="pad"+(capSection===k?" sel":"");
+    b.style.background=s.wash;
+    b.innerHTML=`<div class="pname" style="color:${s.ink}">${s.label}</div><div class="phas">${s.has}</div>`;
+    b.onclick=()=>{capSection=k;capInst="";renderCapture();};
+    pads.appendChild(b);
+  });
+  const instWrap=document.getElementById("capInstWrap"),instSel=document.getElementById("capInst");
+  if(capSection){
+    instWrap.style.display="block";
+    instSel.innerHTML='<option value="">— instrument (optional) —</option>';
+    state.items.filter(i=>i.section===capSection).forEach(i=>{
+      const o=document.createElement("option");o.value=i.id;o.textContent=i.title;
+      if(i.id===capInst)o.selected=true;instSel.appendChild(o);
+    });
+    instSel.onchange=e=>{capInst=e.target.value;};
+  } else instWrap.style.display="none";
+
+  const txt=document.getElementById("capText").value.trim();
+  document.getElementById("capBtn").disabled=!(txt&&capSection);
+
+  renderTodoList();
+}
+function renderTodoList(){
+  const wrap=document.getElementById("todoList");
+  const open=state.todos.filter(t=>!t.done);
+  const done=state.todos.filter(t=>t.done);
+  const ordered=[...open,...done];
+  if(!ordered.length){wrap.innerHTML='<div class="empty">Nothing captured yet. Dump your first thought above.</div>';return;}
+  wrap.innerHTML="";
+  ordered.forEach(t=>{
+    const inst=state.items.find(i=>i.id===t.itemId);
+    const sec=SECTIONS[t.section];
+    const row=document.createElement("div");
+    row.className="todo"+(t.done?" done":"");
+    row.innerHTML=`<button class="chk">${t.done?"✓":"○"}</button>
+      <span class="ttext">${escapeHtml(t.text)}</span>
+      <span class="tag" style="background:${sec.wash};color:${sec.ink}">${sec.label}${inst?" · "+escapeHtml(inst.title.slice(0,16))+(inst.title.length>16?"…":""):""}</span>
+      <button class="del">×</button>`;
+    row.querySelector(".chk").onclick=()=>{t.done=!t.done;save();renderTodoList();updateBadge();};
+    row.querySelector(".del").onclick=()=>{state.todos=state.todos.filter(x=>x.id!==t.id);save();renderTodoList();updateBadge();};
+    wrap.appendChild(row);
+  });
+}
+function addTodo(){
+  const ta=document.getElementById("capText");
+  const text=ta.value.trim();
+  if(!text||!capSection)return;
+  state.todos.unshift({id:"t"+Date.now(),text,section:capSection,itemId:capInst,done:false});
+  ta.value="";capInst="";
+  save();renderCapture();updateBadge();
+}
+
+// ---------- render: podium ----------
+function renderPodium(){
+  const dated=state.items.filter(i=>i.deadline&&daysUntil(i.deadline)!==null&&daysUntil(i.deadline)>=0)
+    .sort((a,b)=>daysUntil(a.deadline)-daysUntil(b.deadline));
+  const soonest=dated.length?daysUntil(dated[0].deadline):99;
+  const fermataSlot=document.getElementById("fermataSlot");
+  fermataSlot.innerHTML = soonest>2
+    ? `<div class="fermataBanner"><span class="mk">𝄐</span><span class="tx">Nothing's due in the next two days. Hold the rest — that's allowed.</span></div>`
+    : "";
+
+  const leads=state.items.filter(i=>i.status==="lead");
+  const leadCard=document.getElementById("leadCard");
+  leadCard.innerHTML=leads.map(i=>`<div class="leadItem"><span class="pip" style="background:${SECTION_HEX[i.section]}"></span>
+    <div><div class="leadTitle">${escapeHtml(i.title)}</div><div class="leadNote">${escapeHtml(i.note)}</div></div></div>`).join("")||'<div class="empty">No leads right now.</div>';
+
+  const entering=state.items.filter(i=>i.status==="entering").slice(0,8);
+  const cueCard=document.getElementById("cueCard");
+  cueCard.innerHTML=entering.map(i=>{
+    const d=daysUntil(i.deadline);
+    return `<div class="cue"><span class="pip" style="background:${SECTION_HEX[i.section]}"></span>
+      <span class="cueTitle">${escapeHtml(i.title)}</span>
+      ${i.deadline?`<span class="cueWhen ${d<=3?"urgent":""}">${fmt(i.deadline)}${d<=7?" · "+d+"d":""}</span>`:""}</div>`;
+  }).join("")||'<div class="empty">Nothing cued.</div>';
+
+  document.getElementById("floatLine").innerHTML=
+    `<strong>55.5 professional hrs</strong> committed + <strong>~31.5 family hrs</strong> locked, and only <strong>one</strong> weekend day is ever workable. A standard week leaves about <strong>7 hrs</strong> of float. When a lead needs more, it comes from another section going <em>tacet</em> — not from the float.`;
+
+  document.getElementById("chainCard").innerHTML=
+    `<div class="chain"><b>ICAR ontology</b><span class="ar">→</span>AGU abstract<span class="cd">Aug 5</span></div>
+     <div class="chain"><b>Zenodo · processing · Box QC</b><span class="ar">→</span>ODR release<span class="cd">late Jul</span><span class="ar">→</span>pub<span class="cd">Sep</span></div>
+     <div class="chain"><b>BofA call → PMS</b><span class="ar">→</span>draw funds<span class="ar">→</span>laptop</div>`;
+}
+
+// ---------- render: score ----------
+function renderScore(){
+  const fr=document.getElementById("filterRow");
+  fr.innerHTML="";
+  const mk=(k,label)=>{const b=document.createElement("button");b.className="fChip"+(scoreFilter===k?" on":"");b.textContent=label;
+    b.onclick=()=>{scoreFilter=k;renderScore();};return b;};
+  fr.appendChild(mk("all","All"));
+  Object.entries(STATUS).forEach(([k,v])=>fr.appendChild(mk(k,v.label)));
+
+  const list=document.getElementById("scoreList");
+  list.innerHTML="";
+  Object.entries(SECTIONS).forEach(([key,sec])=>{
+    const items=state.items.filter(i=>i.section===key&&(scoreFilter==="all"||i.status===scoreFilter));
+    if(!items.length)return;
+    const block=document.createElement("div");block.className="secBlock";
+    block.innerHTML=`<div class="secHead" style="border-color:${sec.ink}"><span class="secName" style="color:${sec.ink}">${sec.label}</span><span class="secRole">${sec.role}</span></div>`;
+    items.forEach(i=>{
+      const card=document.createElement("div");card.className="iCard";card.style.background=sec.wash;
+      const st=STATUS[i.status];
+      const todos=state.todos.filter(t=>t.itemId===i.id);
+      card.innerHTML=`
+        <div class="iTop"><span class="iTitle">${escapeHtml(i.title)}<span class="dyn" title="${st.hint}">${st.mark}</span></span>
+        ${i.deadline?`<span class="iDate">${fmt(i.deadline)}</span>`:""}</div>
+        ${i.aim?`<div class="iAim">${escapeHtml(i.aim)}</div>`:""}
+        ${i.note?`<div class="iNote">${escapeHtml(i.note)}</div>`:""}
+        <div class="statusRow">${Object.entries(STATUS).map(([k,v])=>
+          `<button class="sBtn ${i.status===k?"on":""}" data-st="${k}"><span class="sDot" style="background:${v.dot}"></span>${v.label}</button>`).join("")}</div>
+        <div class="livesRow"><span class="lab">lives in</span>
+          <input placeholder="Notion / GitHub / Drive link…" value="${escapeAttr(i.livesIn||"")}">
+          ${i.livesIn?`<a href="${escapeAttr(i.livesIn)}" target="_blank" rel="noreferrer">open ↗</a>`:""}</div>
+        ${todos.length?`<div class="iTodos">${todos.map(t=>`<div class="iTodo ${t.done?"done":""}" data-tid="${t.id}"><button class="chk">${t.done?"✓":"○"}</button><span class="tt">${escapeHtml(t.text)}</span></div>`).join("")}</div>`:""}`;
+      card.querySelectorAll(".sBtn").forEach(b=>b.onclick=()=>{i.status=b.dataset.st;save();renderScore();renderPodium();});
+      const li=card.querySelector(".livesRow input");
+      li.onchange=()=>{i.livesIn=li.value.trim();save();renderScore();};
+      card.querySelectorAll(".iTodo").forEach(el=>{
+        el.querySelector(".chk").onclick=()=>{const t=state.todos.find(x=>x.id===el.dataset.tid);t.done=!t.done;save();renderScore();renderTodoList();updateBadge();};
+      });
+      block.appendChild(card);
+    });
+    list.appendChild(block);
+  });
+}
+
+// ---------- render: log ----------
+function renderLog(){
+  document.getElementById("logDate").value=logDate;
+  document.getElementById("logDate").onchange=e=>{logDate=e.target.value;renderLog();};
+
+  const rows=document.getElementById("stepRows");rows.innerHTML="";
+  const order=["strings","brass","percussion","woodwinds"];
+  order.forEach(k=>{
+    const sec=SECTIONS[k];
+    const row=document.createElement("div");row.className="stepRow";
+    row.innerHTML=`<div class="stepLabelWrap"><span class="stepLabel" style="color:${sec.ink}">${sec.label}</span><span class="stepHas">${sec.has}</span></div>
+      <div class="stepper"><button class="stepBtn" data-d="-1">−</button>
+      <span class="stepVal ${logDraft[k]===0?"zero":""}">${logDraft[k].toFixed(1)}</span>
+      <button class="stepBtn" data-d="1">+</button></div>`;
+    const [minus,plus]=row.querySelectorAll(".stepBtn");
+    minus.onclick=()=>{logDraft[k]=Math.max(0,+(logDraft[k]-0.5).toFixed(1));renderLog();};
+    plus.onclick=()=>{logDraft[k]=+(logDraft[k]+0.5).toFixed(1);renderLog();};
+    rows.appendChild(row);
+  });
+  // ICAR stepper (sub-tally)
+  const sec=SECTIONS.brass;
+  const irow=document.createElement("div");irow.className="stepRow";
+  irow.innerHTML=`<div class="stepLabelWrap"><span class="stepLabel" style="color:var(--brass)">ICAR ⏱</span><span class="stepHas">committed-hour clock (sub-tally of Brass)</span></div>
+    <div class="stepper"><button class="stepBtn" data-d="-1">−</button>
+    <span class="stepVal ${logDraft.icar===0?"zero":""}">${logDraft.icar.toFixed(1)}</span>
+    <button class="stepBtn" data-d="1">+</button></div>`;
+  const [im,ip]=irow.querySelectorAll(".stepBtn");
+  im.onclick=()=>{logDraft.icar=Math.max(0,+(logDraft.icar-0.5).toFixed(1));renderLog();};
+  ip.onclick=()=>{logDraft.icar=+(logDraft.icar+0.5).toFixed(1);renderLog();};
+  rows.appendChild(irow);
+
+  // day total w/ upkeep
+  const UPKEEP=3;
+  const logged=order.reduce((s,k)=>s+logDraft[k],0);
+  const dayTotal=logged+UPKEEP;
+  const diff=+(dayTotal-16).toFixed(1);
+  const tone=logged===0?"var(--faint)":Math.abs(diff)<=1?"var(--woodwinds)":"var(--percussion)";
+  const hint=logged===0?"16 waking hrs = your 4 sections + a fixed 3 for upkeep."
+    :diff===0?"Adds up to a full day."
+    :diff<0?Math.abs(diff)+" hrs unaccounted for."
+    :diff+" hrs over — did sleep give, or double-counted?";
+  document.getElementById("dayTotal").innerHTML=
+    `<span class="dayTotalNum" style="color:${tone}">${dayTotal.toFixed(1)}<span class="dayTotalOf"> / 16 hrs</span></span>
+     <span class="upkeepChip">+3 upkeep (food · gym · transit)</span>
+     <span class="dayHint" style="color:${tone}">${hint}</span>`;
+
+  // ICAR weekly clock
+  const tw=weekKey(todayISO());
+  const icarWk=state.logs.filter(l=>weekKey(l.date)===tw&&l.section==="icar").reduce((s,l)=>s+l.hours,0);
+  document.getElementById("icarBig").innerHTML=icarWk.toFixed(1)+"<small> / 6h</small>";
+  document.getElementById("icarFill").style.width=Math.min(100,(icarWk/6)*100)+"%";
+  document.getElementById("icarHint").textContent=
+    icarWk<6?`${(6-icarWk).toFixed(1)} hrs short of this week's 0.15 FTE commitment.`:"Commitment met for the week.";
+
+  // planned vs actual
+  const logged2={strings:0,brass:0,percussion:0,woodwinds:0};
+  state.logs.filter(l=>weekKey(l.date)===tw).forEach(l=>{if(logged2[l.section]!==undefined)logged2[l.section]+=l.hours;});
+  const pva=document.getElementById("pvaCard");pva.innerHTML="";
+  order.forEach(k=>{
+    const s=SECTIONS[k],lg=logged2[k]||0,bd=s.budget,over=bd>0&&lg>bd*1.1;
+    const r=document.createElement("div");r.className="pva";
+    r.innerHTML=`<span class="pvaName"><span class="nm" style="color:${s.ink}">${s.label}</span><span class="hs">${s.has}</span></span>
+      <span class="pvaTrack">${bd>0?`<span class="pvaMark" style="left:${Math.min(100,(bd/45)*100)}%"></span>`:""}
+      <span class="pvaFill" style="width:${Math.min(100,(lg/45)*100)}%;background:${s.ink};opacity:${over?1:.7}"></span></span>
+      <span class="pvaNums">${lg.toFixed(1)} / ${bd>0?bd:"—"}</span>`;
+    pva.appendChild(r);
+  });
+  const note=document.createElement("div");note.className="smallNote";
+  note.textContent="The tick is the budget; bars are what you logged this week. For noticing drift, not clocking in.";
+  pva.appendChild(note);
+}
+function saveDay(){
+  const order=["strings","brass","percussion","woodwinds","icar"];
+  const entries=order.map(k=>({section:k,hours:logDraft[k]})).filter(e=>e.hours>0);
+  if(!entries.length)return;
+  state.logs=state.logs.filter(l=>!(l.date===logDate&&entries.some(e=>e.section===l.section)));
+  entries.forEach(e=>state.logs.push({id:"l"+Date.now()+e.section,date:logDate,section:e.section,hours:e.hours}));
+  logDraft={strings:0,brass:0,percussion:0,woodwinds:0,icar:0};
+  save();renderLog();
+  const btn=document.getElementById("saveDayBtn");btn.textContent="Saved ✓";setTimeout(()=>btn.textContent="Save day",1200);
+}
+
+// ---------- badge ----------
+function updateBadge(){
+  const open=state.todos.filter(t=>!t.done).length;
+  const btn=document.querySelector('nav.tabs button[data-screen="capture"]');
+  let b=btn.querySelector(".badge");
+  if(open>0){if(!b){b=document.createElement("span");b.className="badge";btn.style.position="relative";btn.appendChild(b);}b.textContent=open;}
+  else if(b)b.remove();
+}
+
+// ---------- nav ----------
+function show(screen){
+  document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
+  document.getElementById("screen-"+screen).classList.add("active");
+  document.querySelectorAll("nav.tabs button").forEach(b=>b.classList.toggle("on",b.dataset.screen===screen));
+  window.scrollTo(0,0);
+  if(screen==="podium")renderPodium();
+  if(screen==="score")renderScore();
+  if(screen==="log")renderLog();
+  if(screen==="capture")renderCapture();
+}
+
+// ---------- utils ----------
+function escapeHtml(s){return (s||"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+function escapeAttr(s){return escapeHtml(s);}
+
+// ---------- init ----------
+load();
+renderHeader();
+renderCapture();
+updateBadge();
+document.getElementById("capText").addEventListener("input",()=>{
+  const txt=document.getElementById("capText").value.trim();
+  document.getElementById("capBtn").disabled=!(txt&&capSection);
+});
+document.getElementById("capBtn").onclick=addTodo;
+document.getElementById("saveDayBtn").onclick=saveDay;
+document.querySelectorAll("nav.tabs button").forEach(b=>b.onclick=()=>show(b.dataset.screen));
+</script>
+</body>
+</html>
